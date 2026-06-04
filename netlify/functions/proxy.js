@@ -13,23 +13,39 @@ exports.handler = async (event) => {
   }
 
   try {
-    // POSTボディがあればパラメータとして転送
     let params = {};
-    if (event.httpMethod === 'POST' && event.body) {
-      try { params = JSON.parse(event.body); } catch(_) {}
+
+    // POSTボディを解析
+    if (event.body) {
+      try {
+        params = JSON.parse(event.body);
+      } catch(_) {
+        // JSON解析失敗時はURLエンコードとして試みる
+        const urlParams = new URLSearchParams(event.body);
+        urlParams.forEach((v, k) => { params[k] = v; });
+      }
     }
-    // GETパラメータもマージ
+
+    // GETパラメータをマージ
     Object.assign(params, event.queryStringParameters || {});
 
+    console.log('params keys:', Object.keys(params).join(','));
+    console.log('action:', params.action);
+
     const query = new URLSearchParams(params).toString();
-    const url = query ? GAS_URL + '?' + query : GAS_URL;
+    const url = GAS_URL + '?' + query;
+
+    console.log('url length:', url.length);
 
     const response = await fetch(url, { method: 'GET', redirect: 'follow' });
     const text = await response.text();
 
+    console.log('GAS response:', text.slice(0, 200));
+
     return { statusCode: 200, headers, body: text };
 
   } catch (err) {
+    console.error('proxy error:', err.message);
     return {
       statusCode: 500,
       headers,
