@@ -1,5 +1,4 @@
-// netlify/functions/proxy.js 修正版
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbwFtdsZ77zgFgME271dn7OUCvTho_bnQ0PTJPdgAmqSg981-osYiEucDn7d_Xcu18Ly/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbyl95PFSRL3ml3OjZOCrhuFIKqUhOUrBaKv0Y6ZgfzAJfIWyHs8ZmFstXhWj3aiH6Q2mg/exec';
 
 exports.handler = async (event) => {
   const headers = {
@@ -15,7 +14,6 @@ exports.handler = async (event) => {
   try {
     const qs = event.queryStringParameters || {};
 
-    // GET リクエスト
     if (event.httpMethod === 'GET' || !event.body) {
       const query = new URLSearchParams(qs).toString();
       const url = query ? GAS_URL + '?' + query : GAS_URL;
@@ -23,11 +21,14 @@ exports.handler = async (event) => {
       return { statusCode: 200, headers, body: await res.text() };
     }
 
-    // POST リクエスト：JSONのままGASに転送（base64を壊さない）
+    const bodyStr = event.body;
     const res = await fetch(GAS_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },  // ← これだけ変更
-      body: event.body,  // ← パースせずそのまま転送
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(bodyStr).toString()  // ← 追加
+      },
+      body: bodyStr,
       redirect: 'follow'
     });
 
