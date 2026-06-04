@@ -1,4 +1,4 @@
-// netlify/functions/proxy.js
+// netlify/functions/proxy.js 修正版
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwFtdsZ77zgFgME271dn7OUCvTho_bnQ0PTJPdgAmqSg981-osYiEucDn7d_Xcu18Ly/exec';
 
 exports.handler = async (event) => {
@@ -15,7 +15,7 @@ exports.handler = async (event) => {
   try {
     const qs = event.queryStringParameters || {};
 
-    // GETパラメータのみのリクエスト（verify・小さいリクエスト）
+    // GET リクエスト
     if (event.httpMethod === 'GET' || !event.body) {
       const query = new URLSearchParams(qs).toString();
       const url = query ? GAS_URL + '?' + query : GAS_URL;
@@ -23,19 +23,14 @@ exports.handler = async (event) => {
       return { statusCode: 200, headers, body: await res.text() };
     }
 
-    // POSTリクエスト：ボディをフォームエンコードしてGASに送信
-    let body = {};
-    try { body = JSON.parse(event.body); } catch(_) {}
-    Object.assign(body, qs);
-
-    // GASはapplication/x-www-form-urlencodedを受け取れる
-    const formBody = new URLSearchParams(body).toString();
+    // POST リクエスト：JSONのままGASに転送（base64を壊さない）
     const res = await fetch(GAS_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: formBody,
+      headers: { 'Content-Type': 'application/json' },  // ← これだけ変更
+      body: event.body,  // ← パースせずそのまま転送
       redirect: 'follow'
     });
+
     const text = await res.text();
     console.log('GAS POST response:', text.slice(0, 300));
     return { statusCode: 200, headers, body: text };
