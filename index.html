@@ -647,14 +647,15 @@ async function uploadToDrive() {
     for (let ci = 0; ci < total; ci++) {
       sub.textContent = 'チャンク送信中: ' + (ci+1) + '/' + total;
       const payload = {
-        action:  'chunk',
-        session: sessionId,
+        action:      'uploadChunk',   // ← chunk → uploadChunk
+        uploadId:    sessionId,       // ← session → uploadId
+        chunkIndex:  ci,              // ← index → chunkIndex (数値)
+        totalChunks: total,           // ← total → totalChunks (数値)
+        data:        chunks[ci],
+        // 以下はGASで使わないが念のため残してもOK
         name:    verifiedUser,
         raceId:  raceId,
-        index:   String(ci),
-        total:   String(total),
-        count:   String(assigned.length),
-        data:    chunks[ci]
+        count:   String(assigned.length)
       };
       const res = await fetch(GAS_UPLOAD_URL, {
         method:  'POST',
@@ -662,8 +663,24 @@ async function uploadToDrive() {
         body:    JSON.stringify(payload)
       });
       const d = await res.json();
-      if (!d.ok) throw new Error(d.error || 'チャンク送信失敗');
+      if (d.status !== 'ok') throw new Error(d.message || 'チャンク送信失敗'); // ← d.ok → d.status
     }
+
+    // 全チャンク送信後にfinalizeを呼ぶ
+    sub.textContent = 'ファイル確定中...';
+    const finalRes = await fetch(GAS_UPLOAD_URL, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        action:      'finalizeUpload',
+        uploadId:    sessionId,
+        totalChunks: total,
+        fileName:    raceId + '.zip',
+        folderId:    '1s2hAvLU6Ie5TeZv1yj9iVzNpEDxnFsQi'
+      })
+    });
+    const finalD = await finalRes.json();
+    if (finalD.status !== 'ok') throw new Error(finalD.message || 'ファイル確定失敗');
 
     icon.textContent = '✅';
     msg.textContent = '送信完了！';
