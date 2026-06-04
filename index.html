@@ -646,16 +646,22 @@ async function uploadToDrive() {
 
     for (let ci = 0; ci < total; ci++) {
       sub.textContent = 'チャンク送信中: ' + (ci+1) + '/' + total;
-      const url = GAS_UPLOAD_URL
-        + '?action=chunk'
-        + '&session=' + encodeURIComponent(sessionId)
-        + '&name='    + encodeURIComponent(verifiedUser)
-        + '&raceId='  + encodeURIComponent(raceId)
-        + '&index='   + ci
-        + '&total='   + total
-        + '&count='   + assigned.length
-        + '&data='    + encodeURIComponent(chunks[ci]);
-      const d = await xhrGet(url);
+      const payload = {
+        action:  'chunk',
+        session: sessionId,
+        name:    verifiedUser,
+        raceId:  raceId,
+        index:   String(ci),
+        total:   String(total),
+        count:   String(assigned.length),
+        data:    chunks[ci]
+      };
+      const res = await fetch(GAS_UPLOAD_URL, {
+        method:  'POST',
+        headers: {'Content-Type': 'application/json'},
+        body:    JSON.stringify(payload)
+      });
+      const d = await res.json();
       if (!d.ok) throw new Error(d.error || 'チャンク送信失敗');
     }
 
