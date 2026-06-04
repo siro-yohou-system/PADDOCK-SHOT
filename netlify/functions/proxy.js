@@ -13,35 +13,31 @@ exports.handler = async (event) => {
   }
 
   try {
-    let params = {};
+    const qs = event.queryStringParameters || {};
 
-    // POSTボディを解析
-    if (event.body) {
-      try {
-        params = JSON.parse(event.body);
-      } catch(_) {
-        // JSON解析失敗時はURLエンコードとして試みる
-        const urlParams = new URLSearchParams(event.body);
-        urlParams.forEach((v, k) => { params[k] = v; });
-      }
+    // GETパラメータのみのリクエスト（verify・小さいリクエスト）
+    if (event.httpMethod === 'GET' || !event.body) {
+      const query = new URLSearchParams(qs).toString();
+      const url = query ? GAS_URL + '?' + query : GAS_URL;
+      const res = await fetch(url, { method: 'GET', redirect: 'follow' });
+      return { statusCode: 200, headers, body: await res.text() };
     }
 
-    // GETパラメータをマージ
-    Object.assign(params, event.queryStringParameters || {});
+    // POSTリクエスト：ボディをフォームエンコードしてGASに送信
+    let body = {};
+    try { body = JSON.parse(event.body); } catch(_) {}
+    Object.assign(body, qs);
 
-    console.log('params keys:', Object.keys(params).join(','));
-    console.log('action:', params.action);
-
-    const query = new URLSearchParams(params).toString();
-    const url = GAS_URL + '?' + query;
-
-    console.log('url length:', url.length);
-
-    const response = await fetch(url, { method: 'GET', redirect: 'follow' });
-    const text = await response.text();
-
-    console.log('GAS response:', text.slice(0, 200));
-
+    // GASはapplication/x-www-form-urlencodedを受け取れる
+    const formBody = new URLSearchParams(body).toString();
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: formBody,
+      redirect: 'follow'
+    });
+    const text = await res.text();
+    console.log('GAS POST response:', text.slice(0, 300));
     return { statusCode: 200, headers, body: text };
 
   } catch (err) {
