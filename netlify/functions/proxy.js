@@ -1,7 +1,4 @@
 // netlify/functions/proxy.js
-// PADDOCK SHOT → GAS へのプロキシ
-// CORSを回避するためサーバー側からGASにリクエストを転送する
-
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbwFtdsZ77zgFgME271dn7OUCvTho_bnQ0PTJPdgAmqSg981-osYiEucDn7d_Xcu18Ly/exec';
 
 exports.handler = async (event) => {
@@ -11,29 +8,26 @@ exports.handler = async (event) => {
     'Content-Type': 'application/json'
   };
 
-  // OPTIONSプリフライト対応
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 200, headers, body: '' };
   }
 
   try {
-    // クエリパラメータをそのままGASに転送
-    const params = event.queryStringParameters || {};
+    // POSTボディがあればパラメータとして転送
+    let params = {};
+    if (event.httpMethod === 'POST' && event.body) {
+      try { params = JSON.parse(event.body); } catch(_) {}
+    }
+    // GETパラメータもマージ
+    Object.assign(params, event.queryStringParameters || {});
+
     const query = new URLSearchParams(params).toString();
     const url = query ? GAS_URL + '?' + query : GAS_URL;
 
-    const response = await fetch(url, {
-      method: 'GET',
-      redirect: 'follow'
-    });
-
+    const response = await fetch(url, { method: 'GET', redirect: 'follow' });
     const text = await response.text();
 
-    return {
-      statusCode: 200,
-      headers,
-      body: text
-    };
+    return { statusCode: 200, headers, body: text };
 
   } catch (err) {
     return {
