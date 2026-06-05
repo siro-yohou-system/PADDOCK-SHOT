@@ -1,5 +1,7 @@
 [functions]
   directory = "netlify/functions"
+
+[functions."proxy"]
   timeout = 30
 
 [[redirects]]
