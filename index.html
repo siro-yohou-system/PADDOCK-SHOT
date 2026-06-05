@@ -633,7 +633,7 @@ async function uploadToDrive() {
 
     // GASはリダイレクトが発生するためGETパラメータで送信
     // ZIPデータはチャンク分割してGETで送信
-    const CHUNK = 8000;
+    const CHUNK = 90000;  // 90000文字（約67KB）
     const chunks = [];
     for (let i = 0; i < base64.length; i += CHUNK) {
       chunks.push(base64.slice(i, i + CHUNK));
