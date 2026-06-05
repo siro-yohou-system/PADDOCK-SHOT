@@ -1,4 +1,4 @@
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbyl95PFSRL3ml3OjZOCrhuFIKqUhOUrBaKv0Y6ZgfzAJfIWyHs8ZmFstXhWj3aiH6Q2mg/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbzYtVIadSYxQGbAG1qoj8yTqPbO--7fEUsdSzBIlLyWwMDvtf_Mu64eol3FsyBsMkms/exec';
 
 exports.handler = async (event) => {
   const headers = {
@@ -22,17 +22,35 @@ exports.handler = async (event) => {
     }
 
     const bodyStr = event.body;
-    const res = await fetch(GAS_URL, {
+
+    // Step1: GASにPOSTしてリダイレクト先URLを取得
+    const res1 = await fetch(GAS_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(bodyStr).toString()  // ← 追加
+        'Content-Length': Buffer.byteLength(bodyStr).toString()
       },
       body: bodyStr,
-      redirect: 'follow'
+      redirect: 'manual'  // ← リダイレクトを自動追跡しない
     });
 
-    const text = await res.text();
+    // リダイレクトがある場合はリダイレクト先に再POST
+    if (res1.status === 302 || res1.status === 301) {
+      const location = res1.headers.get('location');
+      const res2 = await fetch(location, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(bodyStr).toString()
+        },
+        body: bodyStr
+      });
+      const text = await res2.text();
+      console.log('GAS POST (redirected) response:', text.slice(0, 300));
+      return { statusCode: 200, headers, body: text };
+    }
+
+    const text = await res1.text();
     console.log('GAS POST response:', text.slice(0, 300));
     return { statusCode: 200, headers, body: text };
 
