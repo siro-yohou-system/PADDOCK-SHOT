@@ -480,7 +480,12 @@ function updateManualPreview(){
 });
 
 // ━━━ ZIP名 ━━━
-function getRaceId(){if(currentMode==='race'&&selectedRace)return selectedRace.date.replace(/-/g,'')+'_'+selectedRace.venue+'_'+selectedRace.race;return getManualId();}
+function getRaceId() {
+  const base = currentMode === 'race' && selectedRace
+    ? selectedRace.date.replace(/-/g,'') + '_' + selectedRace.venue + '_' + selectedRace.race
+    : getManualId();
+  return verifiedUser ? base + '_' + verifiedUser : base;
+}
 
 // ━━━ 頭数 ━━━
 function setMax(n){if(!n||n<1||n>18)return;maxHorse=n;document.querySelectorAll('.head-btn').forEach(b=>b.classList.remove('active'));const m={8:0,12:1,16:2,18:3};if(m[n]!==undefined)document.querySelectorAll('.head-btn')[m[n]].classList.add('active');renderHorseGrid();}
