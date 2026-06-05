@@ -38,14 +38,8 @@ exports.handler = async (event) => {
 
     if (res1.status === 302 || res1.status === 301) {
       const location = res1.headers.get('location');
-      console.log('redirecting to:', location);
       const res2 = await fetch(location, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Content-Length': Buffer.byteLength(bodyStr).toString()
-        },
-        body: bodyStr
+        method: 'GET'  // ← POSTではなくGET
       });
       const text = await res2.text();
       console.log('final response:', text.slice(0, 200));
