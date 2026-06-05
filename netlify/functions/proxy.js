@@ -23,7 +23,6 @@ exports.handler = async (event) => {
 
     const bodyStr = event.body;
 
-    // Step1: GASにPOSTしてリダイレクト先URLを取得
     const res1 = await fetch(GAS_URL, {
       method: 'POST',
       headers: {
@@ -31,12 +30,15 @@ exports.handler = async (event) => {
         'Content-Length': Buffer.byteLength(bodyStr).toString()
       },
       body: bodyStr,
-      redirect: 'manual'  // ← リダイレクトを自動追跡しない
+      redirect: 'manual'
     });
 
-    // リダイレクトがある場合はリダイレクト先に再POST
+    console.log('status:', res1.status);
+    console.log('location:', res1.headers.get('location'));
+
     if (res1.status === 302 || res1.status === 301) {
       const location = res1.headers.get('location');
+      console.log('redirecting to:', location);
       const res2 = await fetch(location, {
         method: 'POST',
         headers: {
@@ -46,12 +48,13 @@ exports.handler = async (event) => {
         body: bodyStr
       });
       const text = await res2.text();
-      console.log('GAS POST (redirected) response:', text.slice(0, 300));
+      console.log('final response:', text.slice(0, 200));
       return { statusCode: 200, headers, body: text };
     }
 
+    // リダイレクトなしの場合
     const text = await res1.text();
-    console.log('GAS POST response:', text.slice(0, 300));
+    console.log('direct response:', text.slice(0, 200));
     return { statusCode: 200, headers, body: text };
 
   } catch (err) {
